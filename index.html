@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Corridas - NYC Taxi</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" xintegrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        /* Estilos personalizados para complementar o Tailwind CSS */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FAD904; /* Amarelo táxi */
+        }
+
+        /* Animação simples para o spinner */
+        .spinner {
+            border-top-color: #333;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        /* --- ESTILOS DA ANIMAÇÃO DO TÁXI --- */
+        #taxi-animation {
+            animation: drive-by 3s ease-in-out forwards;
+        }
+
+        @keyframes drive-by {
+            0% {
+                transform: translateX(-200px);
+            }
+            100% {
+                transform: translateX(100vw);
+            }
+        }
+
+        .road-lines {
+            background: repeating-linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.7),
+                rgba(255, 255, 255, 0.7) 30px,
+                transparent 30px,
+                transparent 60px
+            );
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center h-screen p-4 overflow-hidden">
+
+    <div id="loader-wrapper" class="fixed top-0 left-0 w-full h-full flex items-center bg-[#FAD904] z-50 transition-opacity duration-500">
+        <div class="relative w-full">
+             <div class="absolute w-full h-1 bottom-[50%] road-lines"></div>
+            <div id="taxi-animation" class="absolute bottom-[50%] -translate-y-1/2">
+                <svg width="140" height="73" viewBox="0 0 140 73" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6.8125 38.8354V62.4183H135.844V42.7569C135.844 42.7569 130.438 25.1328 111.906 25.1328H33.9375C15.4062 25.1328 6.8125 38.8354 6.8125 38.8354Z" fill="#FAD904" stroke="black" stroke-width="2"/>
+                    <path d="M33.9375 25.1328L42.5312 11.4303H101.594L111.906 25.1328H33.9375Z" fill="#FAD904" stroke="black" stroke-width="2"/>
+                    <rect x="44.3438" y="25.1328" width="28.4062" height="13.7025" fill="#BDE4F5" stroke="black"/>
+                    <rect x="74.5625" y="25.1328" width="28.4062" height="13.7025" fill="#BDE4F5" stroke="black"/>
+                    <path d="M129.5 45.9189L139.5 45.4189V50.9189L129.5 49.9189V45.9189Z" fill="#FF4D4D"/>
+                    <path d="M2.5 45.4189L12.5 45.9189V49.9189L2.5 50.9189V45.4189Z" fill="white"/>
+                    <circle cx="28.4062" cy="62.4183" r="10.2769" fill="#2D2D2D"/>
+                    <circle cx="115.531" cy="62.4183" r="10.2769" fill="#2D2D2D"/>
+                    <circle cx="28.4062" cy="62.4183" r="4.11075" fill="#D9D9D9"/>
+                    <circle cx="115.531" cy="62.4183" r="4.11075" fill="#D9D9D9"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <main class="w-full max-w-md h-full flex flex-col justify-evenly rounded-[2.5rem] p-4 md:p-6 border-4 border-black shadow-2xl opacity-0 transition-opacity duration-1000">
+        
+        <div class="text-center">
+            <a href="https://www.linkedin.com/in/leanttro/" target="_blank" rel="noopener noreferrer"
+               class="inline-block bg-white text-black font-bold border-2 border-black rounded-md px-4 py-2 text-sm shadow-md transition-transform transform hover:scale-105"
+               style="font-family: 'Courier New', monospace; letter-spacing: 2px;">
+               LEANDRO ANDRADE
+               <span class="block text-xs font-normal" style="letter-spacing: normal;">Desenvolvedor de IA Jr.</span>
+            </a>
+        </div>
+
+        <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-800">
+            Simulador de Corridas
+            <span class="block text-xl md:text-2xl font-normal text-gray-600">NYC Taxi</span>
+        </h1>
+        
+        <form id="prediction-form" class="space-y-3">
+            
+            <div class="relative">
+                <i class="fas fa-route absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="number" id="distance" name="trip_distance" placeholder="Distância (km)" min="0.1" step="0.1" required
+                    class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition">
+            </div>
+            
+            <div class="relative">
+                 <i class="fas fa-clock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="number" id="hour" name="pickup_hour" placeholder="Hora do Dia (0-23)" min="0" max="23" required
+                    class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition">
+            </div>
+
+            <div class="relative">
+                 <i class="fas fa-calendar-day absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <select id="day" name="pickup_day_of_week" required
+                    class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg appearance-none bg-white focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition">
+                    <option value="" disabled selected>Dia da Semana</option>
+                    <option value="1">Domingo</option>
+                    <option value="2">Segunda-feira</option>
+                    <option value="3">Terça-feira</option>
+                    <option value="4">Quarta-feira</option>
+                    <option value="5">Quinta-feira</option>
+                    <option value="6">Sexta-feira</option>
+                    <option value="7">Sábado</option>
+                </select>
+                <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+            </div>
+            
+            <div class="relative">
+                <i class="fas fa-users absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <select id="passengers" name="passenger_count" required
+                    class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg appearance-none bg-white focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition">
+                    <option value="" disabled selected>Número de Passageiros</option>
+                    <option value="1">1 Passageiro</option>
+                    <option value="2">2 Passageiros</option>
+                    <option value="3">3 Passageiros</option>
+                    <option value="4">4 Passageiros</option>
+                </select>
+                <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                <input type="text" id="userName" name="userName" placeholder="Seu Nome (Opcional)"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition">
+                <select id="source" name="source"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition text-gray-500">
+                    <option value="">Como me conheceu? (Opcional)</option>
+                    <option value="Linkedin">Linkedin</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Recrutador">Recrutador</option>
+                    <option value="Amigos">Amigos</option>
+                    <option value="Senai">Senai</option>
+                    <option value="Outros">Outros</option>
+                </select>
+            </div>
+
+
+            <button type="submit"
+                class="w-full bg-[#FAD904] text-black font-bold py-3 px-4 rounded-lg hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-transform transform hover:scale-105 border-2 border-black">
+                Prever Custo da Corrida
+            </button>
+        </form>
+
+        <div id="loading-spinner" class="hidden flex justify-center items-center py-4">
+            <div class="spinner w-8 h-8 border-4 border-gray-200 rounded-full"></div>
+        </div>
+
+        <div id="error-message" class="hidden bg-red-100 text-red-700 p-4 rounded-lg text-center"></div>
+
+        <div id="results-area" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white p-3 rounded-lg text-center shadow-md">
+                <p class="text-sm font-medium text-gray-500">Tempo Estimado</p>
+                <p id="estimated-time" class="text-2xl font-bold text-gray-800">--</p>
+            </div>
+            <div class="bg-white p-3 rounded-lg text-center shadow-md">
+                <p class="text-sm font-medium text-gray-500">Custo Estimado</p>
+                <p id="estimated-cost" class="text-2xl font-bold text-gray-800">--</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- LÓGICA DA ANIMAÇÃO E TRANSIÇÃO ---
+        window.addEventListener('load', () => {
+            const loaderWrapper = document.getElementById('loader-wrapper');
+            const mainContent = document.querySelector('main');
+
+            // Define um tempo para a animação ocorrer
+            setTimeout(() => {
+                // Inicia o fade-out do loader
+                loaderWrapper.classList.add('opacity-0');
+                
+                // Remove o loader do DOM após a transição para não atrapalhar
+                loaderWrapper.addEventListener('transitionend', () => {
+                    loaderWrapper.classList.add('hidden');
+                });
+
+                // Inicia o fade-in do conteúdo principal
+                mainContent.classList.remove('opacity-0');
+            }, 2800); // Um pouco antes da animação do táxi terminar
+        });
+
+
+        // --- LÓGICA DO FRONTEND ---
+
+        // IMPORTANTE: Substitua esta URL pela URL da sua API no Render.
+        const apiUrl = 'https://api-taxi-nyc.onrender.com/prever'; 
+
+        // Selecionando os elementos do DOM
+        const form = document.getElementById('prediction-form');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const errorMessage = document.getElementById('error-message');
+        const resultsArea = document.getElementById('results-area');
+        const estimatedTime = document.getElementById('estimated-time');
+        const estimatedCost = document.getElementById('estimated-cost');
+
+        // Adiciona um listener para o evento de submit do formulário
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Previne o recarregamento da página
+
+            // 1. Resetar a interface
+            loadingSpinner.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            errorMessage.textContent = '';
+            estimatedTime.textContent = '--';
+            estimatedCost.textContent = '--';
+            
+            // 2. Coletar os dados do formulário
+            const formData = new FormData(form);
+            
+            // Validação simples para garantir que todos os campos estão preenchidos
+            let isFormValid = true;
+            for(let value of formData.values()){
+                if(!value){
+                    isFormValid = false;
+                    break;
+                }
+            }
+
+            if (!isFormValid) {
+                showError('Por favor, preencha todos os campos.');
+                loadingSpinner.classList.add('hidden');
+                return;
+            }
+
+            // 3. Montar o objeto JSON para a API (convertendo para os tipos corretos)
+            const predictionPayload = {
+                trip_distance: parseFloat(formData.get('trip_distance')),
+                pickup_hour: parseInt(formData.get('pickup_hour'), 10),
+                pickup_day_of_week: parseInt(formData.get('pickup_day_of_week'), 10),
+                passenger_count: parseInt(formData.get('passenger_count'), 10)
+            };
+
+            // Coleta de dados opcionais para seu controle
+            const userInfo = {
+                name: formData.get('userName'),
+                source: formData.get('source')
+            };
+
+            // Você pode enviar 'userInfo' para outro serviço ou apenas logar no console
+            if (userInfo.name || userInfo.source) {
+                console.log('Informações do usuário (opcional):', userInfo);
+            }
+
+            // 4. Chamar a API usando fetch
+            try {
+                if (apiUrl === 'SUA_URL_DO_RENDER_AQUI/prever') {
+                    // Simulação para teste local sem a URL real
+                    console.log("Modo de simulação. Substitua a apiUrl.");
+                    await new Promise(resolve => setTimeout(resolve, 1500)); // Simula espera da rede
+                    const mockData = {
+                        duracao_prevista_min: (predictionPayload.trip_distance * 5) + 5,
+                        valor_previsto_usd: (predictionPayload.trip_distance * 2.5) + 3
+                    };
+                    displayResults(mockData);
+                    return; // Sai da função após a simulação
+                }
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(predictionPayload) // IMPORTANTE: Enviando apenas os dados da previsão
+                });
+
+                if (!response.ok) {
+                    // Se a resposta da API não for de sucesso (ex: erro 500, 404)
+                    const errorData = await response.json().catch(() => ({ detail: 'Erro desconhecido ao processar a resposta.' }));
+                    throw new Error(errorData.detail || `Erro ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // 5. Exibir os resultados
+                displayResults(data);
+
+            } catch (error) {
+                // 6. Exibir mensagens de erro (seja de rede ou da API)
+                console.error('Erro ao fazer a previsão:', error);
+                showError(error.message || 'Não foi possível conectar à API. Tente novamente mais tarde.');
+            } finally {
+                // Garante que o spinner seja escondido ao final, independentemente de sucesso ou erro
+                loadingSpinner.classList.add('hidden');
+            }
+        });
+        
+        /**
+         * Exibe os resultados formatados na interface.
+         * @param {object} data - O objeto de resposta da API.
+         */
+        function displayResults(data) {
+            // Formata o tempo para ter no máximo 1 casa decimal
+            const duration = parseFloat(data.duracao_prevista_min).toFixed(1);
+            // Formata o custo para o padrão de moeda USD
+            const cost = parseFloat(data.valor_previsto_usd).toLocaleString('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            });
+
+            estimatedTime.textContent = `${duration} min`;
+            estimatedCost.textContent = cost;
+        }
+
+        /**
+         * Exibe uma mensagem de erro na interface.
+         * @param {string} message - A mensagem de erro a ser exibida.
+         */
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>

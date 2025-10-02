@@ -57,7 +57,13 @@
         }
     </style>
 </head>
-<body class="flex items-center justify-center h-screen p-4 overflow-hidden">
+<!-- 
+    MODIFICAÇÃO AQUI: 
+    - Removido h-screen (altura fixa na tela) e overflow-hidden.
+    - Adicionado min-h-screen (garante que o body tenha pelo menos a altura da tela) para centralização.
+    - Adicionado p-4 (padding) para garantir espaço nas bordas em todas as telas.
+-->
+<body class="flex items-center justify-center min-h-screen p-4">
 
     <div id="loader-wrapper" class="fixed top-0 left-0 w-full h-full flex items-center bg-[#FAD904] z-50 transition-opacity duration-500">
         <div class="relative w-full">
@@ -79,7 +85,13 @@
         </div>
     </div>
     
-    <main class="w-full max-w-md h-full flex flex-col justify-evenly rounded-[2.5rem] p-4 md:p-6 border-4 border-black shadow-2xl opacity-0 transition-opacity duration-1000">
+    <!-- 
+        MODIFICAÇÃO AQUI: 
+        - Removido h-full para permitir que o contêiner cresça e ative a rolagem do body.
+        - Trocado justify-evenly por justify-between para otimizar o uso do espaço vertical em telas pequenas.
+        - Adicionado mb-8 para dar um respiro no final do conteúdo, especialmente se for rolado.
+    -->
+    <main class="w-full max-w-md flex flex-col justify-between rounded-[2.5rem] p-4 md:p-6 border-4 border-black shadow-2xl opacity-0 transition-opacity duration-1000 my-8">
         
         <div class="text-center">
             <a href="https://www.linkedin.com/in/leanttro/" target="_blank" rel="noopener noreferrer"
@@ -90,7 +102,7 @@
             </a>
         </div>
 
-        <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-800">
+        <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mt-6 mb-4">
             Simulador de Corridas
             <span class="block text-xl md:text-2xl font-normal text-gray-600">NYC Taxi</span>
         </h1>
@@ -166,7 +178,7 @@
 
         <div id="error-message" class="hidden bg-red-100 text-red-700 p-4 rounded-lg text-center"></div>
 
-        <div id="results-area" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="results-area" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
             <div class="bg-white p-3 rounded-lg text-center shadow-md">
                 <p class="text-sm font-medium text-gray-500">Tempo Estimado</p>
                 <p id="estimated-time" class="text-2xl font-bold text-gray-800">--</p>
@@ -229,15 +241,15 @@
             
             // Validação simples para garantir que todos os campos estão preenchidos
             let isFormValid = true;
-            for(let value of formData.values()){
-                if(!value){
+            // Verifica se os campos obrigatórios estão vazios
+            ['trip_distance', 'pickup_hour', 'pickup_day_of_week', 'passenger_count'].forEach(field => {
+                if (!formData.get(field)) {
                     isFormValid = false;
-                    break;
                 }
-            }
+            });
 
             if (!isFormValid) {
-                showError('Por favor, preencha todos os campos.');
+                showError('Por favor, preencha todos os campos obrigatórios.');
                 loadingSpinner.classList.add('hidden');
                 return;
             }
@@ -263,7 +275,7 @@
 
             // 4. Chamar a API usando fetch
             try {
-                if (apiUrl === 'SUA_URL_DO_RENDER_AQUI/prever') {
+                if (apiUrl === 'https://api-taxi-nyc.onrender.com/prever') {
                     // Simulação para teste local sem a URL real
                     console.log("Modo de simulação. Substitua a apiUrl.");
                     await new Promise(resolve => setTimeout(resolve, 1500)); // Simula espera da rede

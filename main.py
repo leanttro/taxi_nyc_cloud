@@ -2,12 +2,12 @@ import os
 import joblib
 import requests # Usado para fazer o download
 from flask import Flask, request, jsonify
-from flask_cors import CORS # Adicione esta linha
+from flask_cors import CORS 
 import pandas as pd
 
 # --- CONFIGURAÇÃO INICIAL ---
 app = Flask(__name__)
-CORS(app)  # Adicione esta linha logo após a inicialização do app
+CORS(app)  
 modelos_carregados = False
 
 # --- SEUS LINKS DE DOWNLOAD DIRETO DO GOOGLE DRIVE ---
@@ -54,6 +54,7 @@ def carregar_modelos():
     modelos_carregados = True
     print("Modelos carregados com sucesso!")
 
+
 # --- ENDPOINT PRINCIPAL DA API ---
 @app.route('/prever', methods=['POST'])
 def prever_corrida():
@@ -83,7 +84,7 @@ def index():
     return "API de Previsão (Scikit-learn) com download de modelo está no ar!", 200
 
 if __name__ == '__main__':
-    # A função carregar_modelos() agora será chamada quando o primeiro endpoint for acessado
-    # Isso evita problemas com o worker do Render que pode iniciar a API antes do download.
-    # Em produção, o Render pode chamar a API em um worker, então a lógica deve estar em um endpoint.
+    # Esta linha é o que garante que os modelos serão baixados e carregados
+    # na memória quando o aplicativo for iniciado.
+    carregar_modelos() 
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))

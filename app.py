@@ -1,19 +1,27 @@
 import pandas as pd
 import numpy as np
 from flask import Flask, request, jsonify
+import os # Importa o módulo 'os' para manipulação de caminhos
 
 app = Flask(__name__)
 
-# O nome do seu arquivo Parquet foi simplificado para evitar erros de caminho no Render
+# Nome do arquivo Parquet
 caminho_parquet = 'dados.parquet' 
+
+# Define o diretório base onde o app.py está (necessário no Render)
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
+
+# Constrói o caminho completo do arquivo de forma robusta
+CAMINHO_COMPLETO_PARQUET = os.path.join(BASEDIR, caminho_parquet)
 
 # Carregue o arquivo Parquet uma única vez quando a API iniciar
 try:
-    # O motor 'pyarrow' é o padrão e mais eficiente para arquivos Parquet grandes
-    df_previsoes = pd.read_parquet(caminho_parquet, engine='pyarrow')
+    # Tenta carregar o arquivo usando o caminho completo
+    df_previsoes = pd.read_parquet(CAMINHO_COMPLETO_PARQUET, engine='pyarrow')
     print("DataFrame de previsões carregado com sucesso.")
+    print(f"Caminho do arquivo carregado: {CAMINHO_COMPLETO_PARQUET}")
 except FileNotFoundError:
-    print(f"Erro: O arquivo Parquet '{caminho_parquet}' não foi encontrado.")
+    print(f"Erro: O arquivo Parquet '{CAMINHO_COMPLETO_PARQUET}' não foi encontrado.")
     df_previsoes = None
 except Exception as e:
     print(f"Erro ao carregar o Parquet: {e}")
@@ -58,8 +66,9 @@ def prever():
     if previsao:
         return jsonify(previsao)
     else:
-        return jsonify({'error': 'Erro interno. Verifique se o arquivo de dados foi carregado corretamente.'}), 500
+        # Mensagem de erro melhorada
+        return jsonify({'error': 'Erro interno: Arquivo de dados não carregado. Verifique os logs do Render.'}), 500
 
-# Se você não estiver usando gunicorn, esta linha inicia o servidor Flask
+# O Start Command no Render já usa o Gunicorn, então esta parte permanece comentada.
 # if __name__ == '__main__':
 #     app.run(debug=True)

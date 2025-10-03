@@ -11,7 +11,7 @@ CORS(app)
 modelos_carregados = False
 
 # --- SEUS LINKS DE DOWNLOAD DIRETO DO GOOGLE DRIVE ---
-# Links atualizados com os novos modelos compatíveis
+# Esses são os links que a sua API irá usar para baixar os modelos
 URL_MODELO_TEMPO = 'https://drive.google.com/uc?export=download&id=1Anwt3rJqRPLEQ36bJG-0KuqXDUYNmF4r'
 URL_MODELO_VALOR = 'https://drive.google.com/uc?export=download&id=1QURYrIup2PSI9UWRyRjpeYyCcWyWBYv9'
 
@@ -85,7 +85,8 @@ def index():
     return "API de Previsão de Corridas do NYC Taxi em funcionamento!"
 
 if __name__ == '__main__':
-    # A primeira chamada para carregar os modelos.
+    # Esta linha é o que garante que os modelos serão baixados e carregados
+    # na memória quando o aplicativo for iniciado.
     carregar_modelos() 
     # A variável PORT é injetada pelo Render.
     port = int(os.environ.get("PORT", 5000))

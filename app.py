@@ -75,7 +75,7 @@ def prever_corrida():
         print(f"ERRO INTERNO AO PREVER: {e}")
         return jsonify({"erro": "Ocorreu um erro no servidor ao processar a previsão."}), 500
 
-# --- ROTA PARA SERVIR O HTML ---
+# --- ROTA PARA  SERVIR O  HTML  ---
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')

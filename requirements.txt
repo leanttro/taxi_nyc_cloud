@@ -1,5 +1,6 @@
-Flask
+flask
+gunicorn
 pandas
 numpy
 pyarrow
-gunicorn
+flask-cors

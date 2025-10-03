@@ -11,8 +11,9 @@ CORS(app)
 modelos_carregados = False
 
 # --- SEUS LINKS DE DOWNLOAD DIRETO DO GOOGLE DRIVE ---
-URL_MODELO_TEMPO = 'https://drive.google.com/uc?export=download&id=1HsAuRtPU4r6MJowAg2IMu2ouwVKY8O-H'
-URL_MODELO_VALOR = 'https://drive.google.com/uc?export=download&id=1ilxE_91OGTHIk0R6T3YGRFspH4g5B5xC'
+# Links atualizados com os novos modelos compatíveis
+URL_MODELO_TEMPO = 'https://drive.google.com/uc?export=download&id=1Anwt3rJqRPLEQ36bJG-0KuqXDUYNmF4r'
+URL_MODELO_VALOR = 'https://drive.google.com/uc?export=download&id=1QURYrIup2PSI9UWRyRjpeYyCcWyWBYv9'
 
 # Caminhos locais onde os arquivos serão salvos no Render
 PATH_MODELO_TEMPO = 'modelo_tempo.pkl'
@@ -29,33 +30,37 @@ def download_file(url, destination):
             with open(destination, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
-        print(f"Download para {destination} concluído.")
+        print(f"Modelo baixado com sucesso em {destination}")
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao baixar o arquivo: {e}")
+        # Se falhar, o Render já tentará novamente. Não é necessário relançar o erro aqui.
     except Exception as e:
-        print(f"ERRO ao baixar {url}. Detalhes: {e}")
-        raise
+        print(f"Ocorreu um erro inesperado: {e}")
 
 def carregar_modelos():
-    """
-    Verifica se os modelos existem, faz o download se necessário, e os carrega na memória.
-    """
+    """Carrega os modelos se eles existirem localmente, ou os baixa primeiro."""
     global modelo_tempo, modelo_valor, modelos_carregados
-    
-    # Baixa os modelos apenas se eles não existirem no ambiente
     if not os.path.exists(PATH_MODELO_TEMPO):
         download_file(URL_MODELO_TEMPO, PATH_MODELO_TEMPO)
-        
     if not os.path.exists(PATH_MODELO_VALOR):
         download_file(URL_MODELO_VALOR, PATH_MODELO_VALOR)
-
-    print("Carregando modelos .pkl na memória...")
-    modelo_tempo = joblib.load(PATH_MODELO_TEMPO)
-    modelo_valor = joblib.load(PATH_MODELO_VALOR)
     
-    modelos_carregados = True
-    print("Modelos carregados com sucesso!")
+    if os.path.exists(PATH_MODELO_TEMPO) and os.path.exists(PATH_MODELO_VALOR):
+        print("Carregando modelos do disco...")
+        try:
+            modelo_tempo = joblib.load(PATH_MODELO_TEMPO)
+            modelo_valor = joblib.load(PATH_MODELO_VALOR)
+            modelos_carregados = True
+            print("Modelos carregados com sucesso!")
+        except Exception as e:
+            print(f"Erro ao carregar os modelos: {e}")
+            modelos_carregados = False
+    else:
+        print("Atenção: Os arquivos de modelo não foram encontrados. A API não fará previsões.")
+        modelos_carregados = False
 
 
-# --- ENDPOINT PRINCIPAL DA API ---
+# -- ENDPOINT PRINCIPAL DA API ---
 @app.route('/prever', methods=['POST'])
 def prever_corrida():
     if not modelos_carregados:
@@ -81,10 +86,12 @@ def prever_corrida():
 # --- ROTA DE TESTE ---
 @app.route('/')
 def index():
-    return "API de Previsão (Scikit-learn) com download de modelo está no ar!", 200
+    return "API de Previsão de Corridas do NYC Taxi em funcionamento!"
 
+# --- EXECUÇÃO DA APLICAÇÃO ---
 if __name__ == '__main__':
-    # Esta linha é o que garante que os modelos serão baixados e carregados
-    # na memória quando o aplicativo for iniciado.
-    carregar_modelos() 
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    # A primeira chamada para carregar os modelos.
+    carregar_modelos()
+    # A variável PORT é injetada pelo Render.
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)

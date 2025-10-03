@@ -1,7 +1,10 @@
-numpy
-joblib
-Flask
-Flask-CORS
-pandas
-gunicorn
-scikit-learn==1.6.1
+# Use as versões que criaram o seu PKL no Colab
+scikit-learn==1.7.2
+numpy==2.3.3 
+pandas==2.3.3
+joblib==1.5.2
+
+# Dependências do Servidor
+flask==3.0.3
+flask-cors==4.0.0
+gunicorn==22.0.0

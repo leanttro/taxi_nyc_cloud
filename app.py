@@ -1,14 +1,14 @@
 import pandas as pd
 import numpy as np
 from flask import Flask, request, jsonify
-import os # Importa o módulo 'os' para manipulação de caminhos
+import os 
 
 app = Flask(__name__)
 
-# Nome do arquivo Parquet
+# Nome do arquivo Parquet: deve ser o mesmo nome no GitHub!
 caminho_parquet = 'dados.parquet' 
 
-# Define o diretório base onde o app.py está (necessário no Render)
+# Define o diretório base (robusto contra variações de ambiente do Render)
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 
 # Constrói o caminho completo do arquivo de forma robusta
@@ -30,20 +30,17 @@ except Exception as e:
 
 def encontrar_previsao_mais_proxima(dados_entrada):
     if df_previsoes is None:
-        # Retorna um erro se o DataFrame não foi carregado
         return None
 
     df = df_previsoes.copy()
     
     # 1. Calcular a diferença absoluta para cada coluna
-    # Os nomes das colunas aqui (distancia_km, hora_dia, etc.) DEVEM ser os mesmos do arquivo Parquet.
     df['diff_distancia'] = np.abs(df['distancia_km'] - dados_entrada['trip_distance'])
     df['diff_hora'] = np.abs(df['hora_dia'] - dados_entrada['pickup_hour'])
     df['diff_dia'] = np.abs(df['dia_semana'] - dados_entrada['pickup_day_of_week'])
     df['diff_passageiros'] = np.abs(df['passageiros'] - dados_entrada['passenger_count'])
     
     # 2. Somar as diferenças para encontrar a linha mais próxima
-    # Multiplicar a distância por 10 dá a ela mais peso no cálculo do "vizinho mais próximo"
     df['diferenca_total'] = (df['diff_distancia'] * 10) + df['diff_hora'] + df['diff_dia'] + df['diff_passageiros']
 
     # 3. Encontrar a linha com a menor diferença
@@ -66,9 +63,4 @@ def prever():
     if previsao:
         return jsonify(previsao)
     else:
-        # Mensagem de erro melhorada
         return jsonify({'error': 'Erro interno: Arquivo de dados não carregado. Verifique os logs do Render.'}), 500
-
-# O Start Command no Render já usa o Gunicorn, então esta parte permanece comentada.
-# if __name__ == '__main__':
-#     app.run(debug=True)

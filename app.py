@@ -54,7 +54,7 @@ def encontrar_previsao_mais_proxima(dados_entrada):
         'valor_previsto_usd': previsao_mais_proxima['valor_previsto_usd']
     }
 
-@app.route('/predict', methods=['POST'])
+@app.route('/prever', methods=['POST']) # <--- ROTA CORRIGIDA DE VOLTA PARA '/prever'
 def predict():
     if df_previsoes is None:
         return jsonify({'error': 'Modelo de previsões não carregado. Verifique o arquivo dados.parquet.'}), 500

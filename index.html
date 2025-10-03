@@ -137,10 +137,10 @@
                 <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
             </div>
             
-            <!-- Campo Número de Passageiros -->
-            <div class="relative">
+            <!-- Campo Número de Passageiros - FOI REMOVIDO DO FORMULÁRIO, mas o JS ainda envia '1' -->
+            <div class="relative hidden"> 
                 <i class="fas fa-users absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input type="number" id="passengers" name="passenger_count" placeholder="Número de Passageiros" min="1" required
+                <input type="number" id="passengers" name="passenger_count" placeholder="Número de Passageiros" min="1" 
                     class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition">
             </div>
 
@@ -162,7 +162,7 @@
 
 
             <!-- Botão de Ação -->
-            <button type="submit"
+            <button type="submit" id="submit-button"
                 class="w-full bg-[#FAD904] text-black font-bold py-3 px-4 rounded-lg hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-transform transform hover:scale-105 border-2 border-black">
                 Prever Custo da Corrida
             </button>
@@ -215,91 +215,75 @@
 
         // --- LÓGICA DO FRONTEND ---
 
-        // IMPORTANTE: Substitua esta URL pela URL da sua API no Render.
-        const apiUrl = 'SUA_URL_DO_RENDER_AQUI/prever'; 
+        // *******************************************************************
+        // 1. URL DA API CORRIGIDA PARA O SEU SERVIÇO NO RENDER
+        // *******************************************************************
+        const apiUrl = 'https://simulador-api-taxi.onrender.com/prever'; 
 
         // Selecionando os elementos do DOM
         const form = document.getElementById('prediction-form');
         const loadingSpinner = document.getElementById('loading-spinner');
         const errorMessage = document.getElementById('error-message');
-        const resultsArea = document.getElementById('results-area');
         const estimatedTime = document.getElementById('estimated-time');
         const estimatedCost = document.getElementById('estimated-cost');
+        const submitButton = document.getElementById('submit-button');
 
-        // Adiciona um listener para o evento de submit do formulário
+        // Função auxiliar para exibir o erro
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
         form.addEventListener('submit', async (event) => {
             event.preventDefault(); // Previne o recarregamento da página
 
             // 1. Resetar a interface
             loadingSpinner.classList.remove('hidden');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Aguarde...';
             errorMessage.classList.add('hidden');
-            errorMessage.textContent = '';
             estimatedTime.textContent = '--';
             estimatedCost.textContent = '--';
-            
-            // 2. Coletar os dados do formulário
-            const formData = new FormData(form);
-            
-            // Validação simples para garantir que todos os campos estão preenchidos
-            let isFormValid = true;
-            for(let value of formData.values()){
-                if(!value){
-                    isFormValid = false;
-                    break;
-                }
-            }
 
-            if (!isFormValid) {
-                showError('Por favor, preencha todos os campos.');
+            // 2. Coletar e validar os dados do formulário
+            const tripDistanceEl = document.getElementById('distance');
+            const pickupHourEl = document.getElementById('hour');
+            const pickupDayOfWeekEl = document.getElementById('day');
+
+            // Coletar valores e garantir que são números
+            const tripDistance = parseFloat(tripDistanceEl.value);
+            const pickupHour = parseInt(pickupHourEl.value, 10);
+            const pickupDayOfWeek = parseInt(pickupDayOfWeekEl.value, 10);
+            
+            if (isNaN(tripDistance) || isNaN(pickupHour) || isNaN(pickupDayOfWeek)) {
+                showError('Por favor, preencha todos os campos corretamente.');
                 loadingSpinner.classList.add('hidden');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Prever Custo da Corrida';
                 return;
             }
 
-            // 3. Montar o objeto JSON para a API (convertendo para os tipos corretos)
-            const predictionPayload = {
-                trip_distance: parseFloat(formData.get('trip_distance')),
-                pickup_hour: parseInt(formData.get('pickup_hour'), 10),
-                pickup_day_of_week: parseInt(formData.get('pickup_day_of_week'), 10),
-                passenger_count: parseInt(formData.get('passenger_count'), 10)
+            // 3. Montar o objeto JSON para a API
+            const payload = {
+                trip_distance: tripDistance,
+                pickup_hour: pickupHour,
+                pickup_day_of_week: pickupDayOfWeek,
+                passenger_count: 1 // VALOR PADRÃO ENVIADO PARA SATISFAZER A API
             };
-
-            // Coleta de dados opcionais para seu controle
-            const userInfo = {
-                name: formData.get('userName'),
-                source: formData.get('source')
-            };
-
-            // Você pode enviar 'userInfo' para outro serviço ou apenas logar no console
-            if (userInfo.name || userInfo.source) {
-                console.log('Informações do usuário (opcional):', userInfo);
-            }
 
             // 4. Chamar a API usando fetch
             try {
-                if (apiUrl === 'SUA_URL_DO_RENDER_AQUI/prever') {
-                    // Simulação para teste local sem a URL real
-                    console.log("Modo de simulação. Substitua a apiUrl.");
-                    await new Promise(resolve => setTimeout(resolve, 1500)); // Simula espera da rede
-                    const mockData = {
-                        duracao_prevista_min: (predictionPayload.trip_distance * 5) + 5,
-                        valor_previsto_usd: (predictionPayload.trip_distance * 2.5) + 3
-                    };
-                    displayResults(mockData);
-                    return; // Sai da função após a simulação
-                }
-
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(predictionPayload) // IMPORTANTE: Enviando apenas os dados da previsão
+                    body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {
-                    // Se a resposta da API não for de sucesso (ex: erro 500, 404)
-                    const errorData = await response.json().catch(() => ({ detail: 'Erro desconhecido ao processar a resposta.' }));
-                    throw new Error(errorData.detail || `Erro ${response.status}: ${response.statusText}`);
+                    const errorData = await response.json().catch(() => ({ error: 'Erro de comunicação com o servidor.' }));
+                    throw new Error(errorData.error || `Erro ${response.status}: ${response.statusText}`);
                 }
 
                 const data = await response.json();
@@ -310,10 +294,12 @@
             } catch (error) {
                 // 6. Exibir mensagens de erro (seja de rede ou da API)
                 console.error('Erro ao fazer a previsão:', error);
-                showError(error.message || 'Não foi possível conectar à API. Tente novamente mais tarde.');
+                showError(error.message || 'Não foi possível conectar à API. Verifique a URL do Render.');
             } finally {
-                // Garante que o spinner seja escondido ao final, independentemente de sucesso ou erro
+                // Garante que o spinner seja escondido ao final e o botão reativado
                 loadingSpinner.classList.add('hidden');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Prever Custo da Corrida';
             }
         });
         
@@ -334,20 +320,6 @@
             estimatedCost.textContent = cost;
         }
 
-        /**
-         * Exibe uma mensagem de erro na interface.
-         * @param {string} message - A mensagem de erro a ser exibida.
-         */
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.classList.remove('hidden');
-        }
-
     </script>
 </body>
 </html>
-
-
-
-
-

@@ -66,6 +66,3 @@ def prever():
         return jsonify(previsao)
     else:
         return jsonify({'error': 'Erro interno: Arquivo de dados não carregado. Verifique os logs do Render.'}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True) 

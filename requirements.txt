@@ -1,7 +1,8 @@
-flask
-gunicorn
-flask-cors
-pandas
-scikit-learn
-requests
-joblib
+flask==3.0.0
+gunicorn==22.0.0
+flask-cors==4.0.0
+pandas==2.2.2
+scikit-learn==1.4.2
+requests==2.31.0
+joblib==1.4.2
+numpy==1.26.4

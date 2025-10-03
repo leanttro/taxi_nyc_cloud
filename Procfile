@@ -1,1 +1,1 @@
-web: gunicorn app:app
+web: /usr/local/bin/gunicorn app:app

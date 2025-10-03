@@ -222,8 +222,9 @@
 
         // --- LÓGICA DO FRONTEND ---
 
-        // IMPORTANTE: Substitua esta URL pela URL da sua API no Render.
-        const apiUrl = 'https://api-taxi-nyc.onrender.com/prever'; 
+        // CORREÇÃO CRÍTICA: O caminho da API deve ser RELATIVO para funcionar no Hugging Face (no mesmo servidor)
+        // Alterado para '/prever'
+        const apiUrl = '/prever'; 
 
         // Selecionando os elementos do DOM
         const form = document.getElementById('prediction-form');
@@ -283,17 +284,8 @@
 
             // 4. Chamar a API usando fetch
             try {
-                if (apiUrl === 'SUA_URL_DO_RENDER_AQUI/prever') {
-                    // Simulação para teste local sem a URL real
-                    console.log("Modo de simulação. Substitua a apiUrl.");
-                    await new Promise(resolve => setTimeout(resolve, 1500)); // Simula espera da rede
-                    const mockData = {
-                        duracao_prevista_min: (predictionPayload.trip_distance * 5) + 5,
-                        valor_previsto_usd: (predictionPayload.trip_distance * 2.5) + 3
-                    };
-                    displayResults(mockData);
-                    return; // Sai da função após a simulação
-                }
+                // A simulação de teste local e a verificação de URL de Render foram removidas,
+                // pois agora estamos usando o caminho relativo '/prever' para o Hugging Face.
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -353,4 +345,3 @@
     </script>
 </body>
 </html>
-

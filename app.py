@@ -3,14 +3,15 @@ import pandas as pd
 import os
 import psycopg2
 from dotenv import load_dotenv
-from flask_cors import CORS, cross_origin  # <-- IMPORTANTE
+from flask_cors import CORS, cross_origin  # CORS para liberar chamadas externas
 
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/predict": {"origins": "*"}})  
-# se quiser restringir só para seu site, troque "*" por ["https://leanttro.github.io"]
+# Pode trocar "*" por ["https://leanttro.github.io"] se quiser restringir
 
+# Carregar parquet
 try:
     df = pd.read_parquet('dados.parquet')
 except FileNotFoundError:
@@ -54,7 +55,7 @@ def home():
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST', 'OPTIONS'])
-@cross_origin(origins=["https://leanttro.github.io"])  # <-- libera seu frontend
+@cross_origin(origins=["https://leanttro.github.io"])  # libera só para seu frontend
 def predict():
     if df.empty:
         return jsonify({'error': 'Servidor não conseguiu carregar os dados de previsão.'}), 500
@@ -65,22 +66,23 @@ def predict():
 
     try:
         distancia = data['trip_distance']
-        hora = data['pickup_hour']
-        dia_semana = data['pickup_day_of_week']
+        hora = data['hora']              # agora bate com o parquet (hora_dia)
+        dia_semana = data['dia_semana']  # bate com o parquet
         nome = data.get('nome')
         fonte = data['fonte']
     except KeyError as e:
         return jsonify({'error': f'Campo obrigatório ausente: {e}'}), 400
 
+    # Filtrar no DataFrame com os nomes corretos
     resultado = df[
         (df['distancia_km'] == distancia) &
-        (df['pickup_hour'] == hora) & 
+        (df['hora_dia'] == hora) & 
         (df['dia_semana'] == dia_semana)
     ]
 
     if not resultado.empty:
-        valor_predito = resultado['valor_corrida'].iloc[0]
-        tempo_predito = resultado['tempo_viagem_minutos'].iloc[0]
+        valor_predito = resultado['valor_previsto_usd'].iloc[0]
+        tempo_predito = resultado['duracao_prevista_min'].iloc[0]
 
         try:
             conn = get_db_connection()

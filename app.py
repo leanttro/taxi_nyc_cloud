@@ -8,22 +8,19 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Tenta carregar o arquivo Parquet, com tratamento de erro
 try:
     df = pd.read_parquet('dados.parquet')
 except FileNotFoundError:
-    print("ERRO: O arquivo 'dados.parquet' não foi encontrado. Certifique-se de que ele está na mesma pasta que o app.py.")
-    df = pd.DataFrame() # Cria um dataframe vazio para evitar que o app quebre ao iniciar
+    print("ERRO: O arquivo 'dados.parquet' não foi encontrado.")
+    df = pd.DataFrame()
 
 def get_db_connection():
     """Cria e retorna uma conexão com o banco de dados."""
-    # --- A ÚNICA ALTERAÇÃO ESTÁ AQUI ---
-    # Agora ele busca pela CHAVE 'DATABASE_URL' que você vai criar no Render
+    # Acessa a variável de ambiente 'DATABASE_URL'
     conn = psycopg2.connect(os.environ['DATABASE_URL'])
     return conn
 
 def criar_tabela_se_nao_existir():
-    """Executa o comando SQL para criar nossa tabela de simulações se ela ainda não existir."""
     conn = get_db_connection()
     if conn:
         cur = conn.cursor()
@@ -47,17 +44,14 @@ def criar_tabela_se_nao_existir():
 
 @app.route('/')
 def home():
-    """Renderiza a página inicial (index.html)."""
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    """Recebe os dados do front-end, busca a previsão e salva o resultado no banco."""
     if df.empty:
         return jsonify({'error': 'Dados de previsão não carregados no servidor.'}), 500
 
     data = request.json
-
     try:
         distancia = data['trip_distance']
         hora = data['pickup_hour']
@@ -67,7 +61,6 @@ def predict():
     except KeyError as e:
         return jsonify({'error': f'Campo obrigatório ausente no envio: {e}'}), 400
     
-    # A busca no DataFrame usa os nomes das colunas do arquivo Parquet, o que já estava correto.
     resultado = df[
         (df['distancia_km'] == distancia) &
         (df['hora'] == hora) &
@@ -77,8 +70,6 @@ def predict():
     if not resultado.empty:
         valor_predito = resultado['valor_corrida'].iloc[0]
         tempo_predito = resultado['tempo_viagem_minutos'].iloc[0]
-
-        # Tenta salvar a previsão no banco de dados
         try:
             conn = get_db_connection()
             if conn:
@@ -94,8 +85,6 @@ def predict():
                 conn.close()
         except Exception as e:
             print(f"AVISO: Falha ao salvar no banco de dados: {e}")
-
-        # Retorna o resultado para o front-end
         return jsonify({
             'valor_corrida': f'{valor_predito:.2f}',
             'tempo_viagem_minutos': f'{tempo_predito:.1f}'
@@ -103,7 +92,6 @@ def predict():
     else:
         return jsonify({'error': 'Combinação de parâmetros não encontrada nos dados pré-calculados'}), 404
 
-# Executa a função para criar a tabela logo que a aplicação iniciar
 criar_tabela_se_nao_existir()
 
 if __name__ == '__main__':

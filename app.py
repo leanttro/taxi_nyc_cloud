@@ -17,8 +17,9 @@ except FileNotFoundError:
 
 def get_db_connection():
     """Cria e retorna uma conexão com o banco de dados."""
-    # --- A ÚNICA LINHA ALTERADA ESTÁ AQUI ---
-    conn = psycopg2.connect(os.environ['postgresql://taxi_simulacoes_db_user:n13itHNrUkSChN4uNKdgpPeYntUUfWZ2@dpg-d3gl1k63jp1c73esbuo0-a/taxi_simulacoes_db'])
+    # --- A ÚNICA ALTERAÇÃO ESTÁ AQUI ---
+    # Agora ele busca pela CHAVE 'DATABASE_URL' que você vai criar no Render
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
     return conn
 
 def criar_tabela_se_nao_existir():

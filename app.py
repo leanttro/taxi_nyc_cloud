@@ -3,13 +3,12 @@ import pandas as pd
 import os
 import psycopg2
 from dotenv import load_dotenv
-from flask_cors import CORS, cross_origin  # CORS para liberar chamadas externas
+from flask_cors import CORS, cross_origin
 
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/predict": {"origins": "*"}})  
-# Pode trocar "*" por ["https://leanttro.github.io"] se quiser restringir
+CORS(app, resources={r"/predict": {"origins": "*"}})
 
 # Carregar parquet
 try:
@@ -55,7 +54,7 @@ def home():
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST', 'OPTIONS'])
-@cross_origin(origins=["https://leanttro.github.io"])  # libera só para seu frontend
+@cross_origin()
 def predict():
     if df.empty:
         return jsonify({'error': 'Servidor não conseguiu carregar os dados de previsão.'}), 500
@@ -66,14 +65,13 @@ def predict():
 
     try:
         distancia = data['trip_distance']
-        hora = data['hora']              # agora bate com o parquet (hora_dia)
-        dia_semana = data['dia_semana']  # bate com o parquet
+        hora = data['hora']
+        dia_semana = data['dia_semana']
         nome = data.get('nome')
         fonte = data['fonte']
     except KeyError as e:
         return jsonify({'error': f'Campo obrigatório ausente: {e}'}), 400
 
-    # Filtrar no DataFrame com os nomes corretos
     resultado = df[
         (df['distancia_km'] == distancia) &
         (df['hora_dia'] == hora) & 
@@ -81,8 +79,9 @@ def predict():
     ]
 
     if not resultado.empty:
-        valor_predito = resultado['valor_previsto_usd'].iloc[0]
-        tempo_predito = resultado['duracao_prevista_min'].iloc[0]
+        # CORREÇÃO: Converter os tipos numpy para float padrão do Python
+        valor_predito = float(resultado['valor_previsto_usd'].iloc[0])
+        tempo_predito = float(resultado['duracao_prevista_min'].iloc[0])
 
         try:
             conn = get_db_connection()
@@ -98,6 +97,7 @@ def predict():
                 cur.close()
                 conn.close()
         except Exception as e:
+            # Não quebra a aplicação se o DB falhar, apenas avisa no log
             print(f"AVISO: Falha ao salvar no banco de dados: {e}")
 
         return jsonify({
@@ -107,12 +107,11 @@ def predict():
     else:
         return jsonify({'error': 'Combinação de parâmetros não encontrada'}), 404
 
-# Cria a tabela quando o servidor inicia
+# Roda a criação da tabela na inicialização do app
 try:
     criar_tabela_se_nao_existir()
 except Exception as e:
     print(f"ERRO CRÍTICO ao inicializar o banco de dados: {e}")
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=True)

@@ -137,20 +137,13 @@
                 <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
             </div>
             
-            <!-- Campo Número de Passageiros - FOI REMOVIDO DO FORMULÁRIO, mas o JS ainda envia '1' -->
-            <div class="relative hidden"> 
-                <i class="fas fa-users absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input type="number" id="passengers" name="passenger_count" placeholder="Número de Passageiros" min="1" 
-                    class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition">
-            </div>
-
             <!-- Campos Opcionais/Obrigatórios -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                <!-- Nome (Opcional) - Removido o 'required' -->
+                <!-- Nome (Opcional) -->
                 <input type="text" id="userName" name="userName" placeholder="Seu Nome (Opcional)"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition">
                 
-                <!-- Fonte (Obrigatório) - Adicionado 'required' e alterado o placeholder da opção inicial -->
+                <!-- Fonte (Obrigatório) -->
                 <select id="source" name="source" required
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition text-gray-800">
                     <option value="" disabled selected>Como me conheceu? *</option>
@@ -162,7 +155,6 @@
                     <option value="Outros">Outros</option>
                 </select>
             </div>
-
 
             <!-- Botão de Ação -->
             <button type="submit" id="submit-button"
@@ -200,30 +192,18 @@
             const loaderWrapper = document.getElementById('loader-wrapper');
             const mainContent = document.querySelector('main');
 
-            // Define um tempo para a animação ocorrer
             setTimeout(() => {
-                // Inicia o fade-out do loader
                 loaderWrapper.classList.add('opacity-0');
-                
-                // Remove o loader do DOM após a transição para não atrapalhar
                 loaderWrapper.addEventListener('transitionend', () => {
                     loaderWrapper.classList.add('hidden');
                 });
-
-                // Inicia o fade-in do conteúdo principal
                 mainContent.classList.remove('opacity-0');
-            }, 2800); // Um pouco antes da animação do táxi terminar
+            }, 2800);
         });
 
-
         // --- LÓGICA DO FRONTEND ---
+        const apiUrl = 'https://simulador-api-taxi.onrender.com/predict';
 
-        // *******************************************************************
-        // 1. URL DA API CORRIGIDA PARA O SEU SERVIÇO NO RENDER
-        // *******************************************************************
-        const apiUrl = 'https://simulador-api-taxi.onrender.com/predict'; 
-
-        // Selecionando os elementos do DOM
         const form = document.getElementById('prediction-form');
         const loadingSpinner = document.getElementById('loading-spinner');
         const errorMessage = document.getElementById('error-message');
@@ -231,16 +211,14 @@
         const estimatedCost = document.getElementById('estimated-cost');
         const submitButton = document.getElementById('submit-button');
 
-        // Função auxiliar para exibir o erro
         function showError(message) {
             errorMessage.textContent = message;
             errorMessage.classList.remove('hidden');
         }
 
         form.addEventListener('submit', async (event) => {
-            event.preventDefault(); // Previne o recarregamento da página
+            event.preventDefault();
 
-            // 1. Resetar a interface
             loadingSpinner.classList.remove('hidden');
             submitButton.disabled = true;
             submitButton.textContent = 'Aguarde...';
@@ -248,22 +226,14 @@
             estimatedTime.textContent = '--';
             estimatedCost.textContent = '--';
 
-            // 2. Coletar e validar os dados do formulário
-            const tripDistanceEl = document.getElementById('distance');
-            const pickupHourEl = document.getElementById('hour');
-            const pickupDayOfWeekEl = document.getElementById('day');
-            
-            // ATUALIZAÇÃO: Captura dos valores dos novos campos 
-            const nome = document.getElementById('userName').value; // O ID do campo de nome é 'userName'
-            const fonte = document.getElementById('source').value; // O ID do campo de seleção é 'source'
+            const tripDistance = parseFloat(document.getElementById('distance').value);
+            // CORREÇÃO: Os nomes dos campos no payload devem corresponder ao que a API espera
+            const hora = parseInt(document.getElementById('hour').value, 10);
+            const dia_semana = parseInt(document.getElementById('day').value, 10);
+            const nome = document.getElementById('userName').value;
+            const fonte = document.getElementById('source').value;
 
-            // Coletar valores e garantir que são números
-            const tripDistance = parseFloat(tripDistanceEl.value);
-            const pickupHour = parseInt(pickupHourEl.value, 10);
-            const pickupDayOfWeek = parseInt(pickupDayOfWeekEl.value, 10);
-            
-            // Validação de campos obrigatórios (além da validação do browser para "required")
-            if (isNaN(tripDistance) || isNaN(pickupHour) || isNaN(pickupDayOfWeek)) {
+            if (isNaN(tripDistance) || isNaN(hora) || isNaN(dia_semana) || !fonte) {
                 showError('Por favor, preencha todos os campos obrigatórios corretamente.');
                 loadingSpinner.classList.add('hidden');
                 submitButton.disabled = false;
@@ -271,84 +241,53 @@
                 return;
             }
 
-            // NOVA VALIDAÇÃO DE LIMITES EM JAVASCRIPT
-            if (tripDistance > 100) {
-                showError('A distância máxima permitida para a previsão é de 100 km.');
-                loadingSpinner.classList.add('hidden');
-                submitButton.disabled = false;
-                submitButton.textContent = 'Prever Custo da Corrida';
-                return;
-            }
-
-            if (pickupHour < 0 || pickupHour > 23) {
-                 showError('A hora do dia deve ser um valor entre 0 e 23.');
-                loadingSpinner.classList.add('hidden');
-                submitButton.disabled = false;
-                submitButton.textContent = 'Prever Custo da Corrida';
-                return;
-            }
-            // FIM DA NOVA VALIDAÇÃO DE LIMITES
-
-            // 3. Montar o objeto JSON para a API
-            // ATUALIZAÇÃO: Adicione 'nome' e 'fonte' ao corpo da requisição
             const payload = {
                 trip_distance: tripDistance,
-                pickup_hour: pickupHour,
-                pickup_day_of_week: pickupDayOfWeek,
-                passenger_count: 1, // VALOR PADRÃO ENVIADO PARA SATISFAZER A API
+                hora: hora, // Nome corrigido
+                dia_semana: dia_semana, // Nome corrigido
                 nome: nome,
                 fonte: fonte
             };
 
-            // 4. Chamar a API usando fetch
             try {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: 'Erro de comunicação com o servidor.' }));
-                    throw new Error(errorData.error || `Erro ${response.status}: ${response.statusText}`);
-                }
-
                 const data = await response.json();
 
-                // 5. Exibir os resultados
+                if (!response.ok) throw new Error(data.error || 'Erro desconhecido ao prever.');
+
                 displayResults(data);
 
             } catch (error) {
-                // 6. Exibir mensagens de erro (seja de rede ou da API)
                 console.error('Erro ao fazer a previsão:', error);
-                showError(error.message || 'Não foi possível conectar à API. Verifique a URL do Render.');
+                showError(error.message || 'Não foi possível conectar à API.');
             } finally {
-                // Garante que o spinner seja escondido ao final e o botão reativado
                 loadingSpinner.classList.add('hidden');
                 submitButton.disabled = false;
                 submitButton.textContent = 'Prever Custo da Corrida';
             }
         });
-        
-        /**
-         * Exibe os resultados formatados na interface.
-         * @param {object} data - O objeto de resposta da API.
-         */
-        function displayResults(data) {
-            // Formata o tempo para ter no máximo 1 casa decimal
-            const duration = parseFloat(data.duracao_prevista_min).toFixed(1);
-            // Formata o custo para o padrão de moeda USD
-            const cost = parseFloat(data.valor_previsto_usd).toLocaleString('en-US', {
-                style: 'currency',
-                currency: 'USD'
-            });
 
-            estimatedTime.textContent = `${duration} min`;
+        function displayResults(data) {
+            // CORREÇÃO: Usar as chaves corretas retornadas pela API
+            const duration = data.tempo_viagem_minutos
+                ? `${data.tempo_viagem_minutos} min`
+                : '--';
+
+            const cost = data.valor_corrida
+                ? parseFloat(data.valor_corrida).toLocaleString('en-US', {
+                    style: 'currency',
+                    currency: 'USD'
+                  })
+                : '--';
+
+            estimatedTime.textContent = duration;
             estimatedCost.textContent = cost;
         }
-
     </script>
 </body>
 </html>

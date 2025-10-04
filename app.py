@@ -18,7 +18,7 @@ except FileNotFoundError:
 def get_db_connection():
     """Cria e retorna uma conexão com o banco de dados usando a URL do ambiente."""
     try:
-        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        conn = psycopg2.connect(os.environ['postgresql://taxi_simulacoes_db_user:n13itHNrUkSChN4uNKdgpPeYntUUfWZ2@dpg-d3gl1k63jp1c73esbuo0-a/taxi_simulacoes_db'])
         return conn
     except psycopg2.OperationalError as e:
         print(f"Erro de conexão com o banco de dados: {e}")

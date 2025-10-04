@@ -8,13 +8,15 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# Tenta carregar o arquivo Parquet, com tratamento de erro
 try:
     df = pd.read_parquet('dados.parquet')
 except FileNotFoundError:
-    print("ERRO: O arquivo 'dados.parquet' não foi encontrado.")
-    df = pd.DataFrame()
+    print("ERRO: O arquivo 'dados.parquet' não foi encontrado. Certifique-se de que ele está na mesma pasta que o app.py.")
+    df = pd.DataFrame() # Cria um dataframe vazio para evitar que o app quebre ao iniciar
 
 def get_db_connection():
+    """Cria e retorna uma conexão com o banco de dados usando a URL do ambiente."""
     try:
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
         return conn
@@ -23,10 +25,10 @@ def get_db_connection():
         return None
 
 def criar_tabela_se_nao_existir():
+    """Executa o comando SQL para criar nossa tabela de simulações se ela ainda não existir."""
     conn = get_db_connection()
     if conn:
         cur = conn.cursor()
-        # ATUALIZAÇÃO: Adicionadas as colunas nome_usuario e fonte_conhecimento
         cur.execute('''
             CREATE TABLE IF NOT EXISTS simulacoes (
                 id SERIAL PRIMARY KEY,
@@ -47,41 +49,50 @@ def criar_tabela_se_nao_existir():
 
 @app.route('/')
 def home():
+    """Renderiza a página inicial (index.html)."""
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    """Recebe os dados do front-end, busca a previsão e salva o resultado no banco."""
     if df.empty:
         return jsonify({'error': 'Dados de previsão não carregados no servidor.'}), 500
 
     data = request.json
-    distancia = data['distancia']
-    dia_semana = data['dia_semana']
-    hora = data['hora']
-    # ATUALIZAÇÃO: Captura dos novos campos. .get() é usado para o nome opcional.
-    nome = data.get('nome') # Retorna None se não for enviado
-    fonte = data['fonte']
 
+    # --- CORREÇÃO PRINCIPAL AQUI ---
+    # As chaves (keys) aqui agora são IGUAIS às que o seu JavaScript envia no "payload"
+    try:
+        distancia = data['trip_distance']
+        hora = data['pickup_hour']
+        dia_semana = data['pickup_day_of_week']
+        nome = data.get('nome')
+        fonte = data['fonte']
+    except KeyError as e:
+        # Se algum campo esperado não vier do front-end, retorna um erro claro.
+        return jsonify({'error': f'Campo obrigatório ausente no envio: {e}'}), 400
+    # --- FIM DA CORREÇÃO ---
+    
+    # A busca no DataFrame usa os nomes das colunas do arquivo Parquet, o que já estava correto.
     resultado = df[
         (df['distancia_km'] == distancia) &
-        (df['dia_semana'] == dia_semana) &
-        (df['hora'] == hora)
+        (df['hora'] == hora) &
+        (df['dia_semana'] == dia_semana)
     ]
 
     if not resultado.empty:
         valor_predito = resultado['valor_corrida'].iloc[0]
         tempo_predito = resultado['tempo_viagem_minutos'].iloc[0]
 
+        # Tenta salvar a previsão no banco de dados
         try:
             conn = get_db_connection()
             if conn:
                 cur = conn.cursor()
-                # ATUALIZAÇÃO: Novo comando INSERT com os campos adicionais
                 sql = """
                     INSERT INTO simulacoes (distancia_km, dia_semana, hora, nome_usuario, fonte_conhecimento, tempo_predito, valor_predito) 
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """
-                # ATUALIZAÇÃO: Novos valores passados para o comando SQL
                 params = (distancia, dia_semana, hora, nome, fonte, tempo_predito, valor_predito)
                 cur.execute(sql, params)
                 conn.commit()
@@ -90,13 +101,15 @@ def predict():
         except Exception as e:
             print(f"AVISO: Falha ao salvar no banco de dados: {e}")
 
+        # Retorna o resultado para o front-end
         return jsonify({
             'valor_corrida': f'{valor_predito:.2f}',
             'tempo_viagem_minutos': f'{tempo_predito:.1f}'
         })
     else:
-        return jsonify({'error': 'Combinação de parâmetros não encontrada'}), 404
+        return jsonify({'error': 'Combinação de parâmetros não encontrada nos dados pré-calculados'}), 404
 
+# Executa a função para criar a tabela logo que a aplicação iniciar
 criar_tabela_se_nao_existir()
 
 if __name__ == '__main__':

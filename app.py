@@ -8,7 +8,7 @@ from flask_cors import CORS, cross_origin  # CORS para liberar chamadas externas
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/predict": {"origins": "*"}})  
+CORS(app, resources={r"/predict": {"origins": "*"}})
 # Pode trocar "*" por ["https://leanttro.github.io"] se quiser restringir
 
 # Carregar parquet
@@ -66,14 +66,18 @@ def predict():
 
     try:
         distancia = data['trip_distance']
-        hora = data['hora']              # agora bate com o parquet (hora_dia)
-        dia_semana = data['dia_semana']  # bate com o parquet
+        # Aceita tanto os nomes antigos quanto os novos
+        hora = data.get('hora') or data.get('pickup_hour')
+        dia_semana = data.get('dia_semana') or data.get('pickup_day_of_week')
         nome = data.get('nome')
         fonte = data['fonte']
-    except KeyError as e:
-        return jsonify({'error': f'Campo obrigatório ausente: {e}'}), 400
 
-    # Filtrar no DataFrame com os nomes corretos
+        if hora is None or dia_semana is None:
+            raise KeyError("hora ou dia_semana ausente")
+    except KeyError as e:
+        return jsonify({'error': f"Campo obrigatório ausente: '{e}'"}), 400
+
+    # Filtrar no DataFrame com os nomes corretos do parquet
     resultado = df[
         (df['distancia_km'] == distancia) &
         (df['hora_dia'] == hora) & 

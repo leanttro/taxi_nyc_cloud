@@ -221,7 +221,7 @@
         // *******************************************************************
         // 1. URL DA API CORRIGIDA PARA O SEU SERVIÇO NO RENDER
         // *******************************************************************
-        const apiUrl = 'https://simulador-api-taxi.onrender.com/prever'; 
+        const apiUrl = 'https://simulador-api-taxi.onrender.com/predict'; 
 
         // Selecionando os elementos do DOM
         const form = document.getElementById('prediction-form');
@@ -252,6 +252,10 @@
             const tripDistanceEl = document.getElementById('distance');
             const pickupHourEl = document.getElementById('hour');
             const pickupDayOfWeekEl = document.getElementById('day');
+            
+            // ATUALIZAÇÃO: Captura dos valores dos novos campos 
+            const nome = document.getElementById('userName').value; // O ID do campo de nome é 'userName'
+            const fonte = document.getElementById('source').value; // O ID do campo de seleção é 'source'
 
             // Coletar valores e garantir que são números
             const tripDistance = parseFloat(tripDistanceEl.value);
@@ -286,11 +290,14 @@
             // FIM DA NOVA VALIDAÇÃO DE LIMITES
 
             // 3. Montar o objeto JSON para a API
+            // ATUALIZAÇÃO: Adicione 'nome' e 'fonte' ao corpo da requisição
             const payload = {
                 trip_distance: tripDistance,
                 pickup_hour: pickupHour,
                 pickup_day_of_week: pickupDayOfWeek,
-                passenger_count: 1 // VALOR PADRÃO ENVIADO PARA SATISFAZER A API
+                passenger_count: 1, // VALOR PADRÃO ENVIADO PARA SATISFAZER A API
+                nome: nome,
+                fonte: fonte
             };
 
             // 4. Chamar a API usando fetch

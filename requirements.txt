@@ -2,5 +2,7 @@ flask
 gunicorn
 pandas
 numpy
-pyarrow
 flask-cors
+pyarrow
+psycopg2-binary  
+python-dotenv   

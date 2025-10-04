@@ -1,68 +1,103 @@
+from flask import Flask, request, jsonify, render_template
 import pandas as pd
-import numpy as np
-from flask import Flask, request, jsonify
 import os
-from flask_cors import CORS
+import psycopg2
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # Ativa CORS na instância correta
 
-# Nome do arquivo Parquet: deve ser o mesmo nome no GitHub!
-caminho_parquet = 'dados.parquet'
-
-# Define o diretório base (robusto contra variações de ambiente do Render)
-BASEDIR = os.path.abspath(os.path.dirname(__file__))
-
-# Constrói o caminho completo do arquivo de forma robusta
-CAMINHO_COMPLETO_PARQUET = os.path.join(BASEDIR, caminho_parquet)
-
-# Carregue o arquivo Parquet uma única vez quando a API iniciar
 try:
-    df_previsoes = pd.read_parquet(CAMINHO_COMPLETO_PARQUET, engine='pyarrow')
-    print("DataFrame de previsões carregado com sucesso.")
-    print(f"Caminho do arquivo carregado: {CAMINHO_COMPLETO_PARQUET}")
+    df = pd.read_parquet('dados.parquet')
 except FileNotFoundError:
-    print(f"Erro: O arquivo Parquet '{CAMINHO_COMPLETO_PARQUET}' não foi encontrado.")
-    df_previsoes = None
-except Exception as e:
-    print(f"Erro ao carregar o Parquet: {e}")
-    df_previsoes = None
+    print("ERRO: O arquivo 'dados.parquet' não foi encontrado.")
+    df = pd.DataFrame()
 
-
-def encontrar_previsao_mais_proxima(dados_entrada):
-    if df_previsoes is None:
+def get_db_connection():
+    try:
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        return conn
+    except psycopg2.OperationalError as e:
+        print(f"Erro de conexão com o banco de dados: {e}")
         return None
 
-    df = df_previsoes.copy()
+def criar_tabela_se_nao_existir():
+    conn = get_db_connection()
+    if conn:
+        cur = conn.cursor()
+        # ATUALIZAÇÃO: Adicionadas as colunas nome_usuario e fonte_conhecimento
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS simulacoes (
+                id SERIAL PRIMARY KEY,
+                timestamp TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'UTC'),
+                distancia_km FLOAT,
+                dia_semana INTEGER,
+                hora INTEGER,
+                nome_usuario TEXT, 
+                fonte_conhecimento TEXT,
+                tempo_predito FLOAT,
+                valor_predito FLOAT
+            );
+        ''')
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("Tabela 'simulacoes' verificada/criada com sucesso.")
 
-    # 1. Calcular a diferença absoluta para cada coluna
-    df['diff_distancia'] = np.abs(df['distancia_km'] - dados_entrada['trip_distance'])
-    df['diff_hora'] = np.abs(df['hora_dia'] - dados_entrada['pickup_hour'])
-    df['diff_dia'] = np.abs(df['dia_semana'] - dados_entrada['pickup_day_of_week'])
-    df['diff_passageiros'] = np.abs(df['passageiros'] - dados_entrada['passenger_count'])
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-    # 2. Somar as diferenças para encontrar a linha mais próxima
-    df['diferenca_total'] = (df['diff_distancia'] * 10) + df['diff_hora'] + df['diff_dia'] + df['diff_passageiros']
+@app.route('/predict', methods=['POST'])
+def predict():
+    if df.empty:
+        return jsonify({'error': 'Dados de previsão não carregados no servidor.'}), 500
 
-    # 3. Encontrar a linha com a menor diferença
-    previsao_mais_proxima = df.loc[df['diferenca_total'].idxmin()]
+    data = request.json
+    distancia = data['distancia']
+    dia_semana = data['dia_semana']
+    hora = data['hora']
+    # ATUALIZAÇÃO: Captura dos novos campos. .get() é usado para o nome opcional.
+    nome = data.get('nome') # Retorna None se não for enviado
+    fonte = data['fonte']
 
-    return {
-        'duracao_prevista_min': previsao_mais_proxima['duracao_prevista_min'],
-        'valor_previsto_usd': previsao_mais_proxima['valor_previsto_usd']
-    }
+    resultado = df[
+        (df['distancia_km'] == distancia) &
+        (df['dia_semana'] == dia_semana) &
+        (df['hora'] == hora)
+    ]
 
+    if not resultado.empty:
+        valor_predito = resultado['valor_corrida'].iloc[0]
+        tempo_predito = resultado['tempo_viagem_minutos'].iloc[0]
 
-@app.route('/prever', methods=['POST'])
-def prever():
-    try:
-        dados_entrada = request.get_json()
-    except:
-        return jsonify({'error': 'Payload JSON inválido.'}), 400
+        try:
+            conn = get_db_connection()
+            if conn:
+                cur = conn.cursor()
+                # ATUALIZAÇÃO: Novo comando INSERT com os campos adicionais
+                sql = """
+                    INSERT INTO simulacoes (distancia_km, dia_semana, hora, nome_usuario, fonte_conhecimento, tempo_predito, valor_predito) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """
+                # ATUALIZAÇÃO: Novos valores passados para o comando SQL
+                params = (distancia, dia_semana, hora, nome, fonte, tempo_predito, valor_predito)
+                cur.execute(sql, params)
+                conn.commit()
+                cur.close()
+                conn.close()
+        except Exception as e:
+            print(f"AVISO: Falha ao salvar no banco de dados: {e}")
 
-    previsao = encontrar_previsao_mais_proxima(dados_entrada)
-
-    if previsao:
-        return jsonify(previsao)
+        return jsonify({
+            'valor_corrida': f'{valor_predito:.2f}',
+            'tempo_viagem_minutos': f'{tempo_predito:.1f}'
+        })
     else:
-        return jsonify({'error': 'Erro interno: Arquivo de dados não carregado. Verifique os logs do Render.'}), 500
+        return jsonify({'error': 'Combinação de parâmetros não encontrada'}), 404
+
+criar_tabela_se_nao_existir()
+
+if __name__ == '__main__':
+    app.run(debug=True)

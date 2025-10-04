@@ -16,13 +16,10 @@ except FileNotFoundError:
     df = pd.DataFrame() # Cria um dataframe vazio para evitar que o app quebre ao iniciar
 
 def get_db_connection():
-    """Cria e retorna uma conexão com o banco de dados usando a URL do ambiente."""
-    try:
-        conn = psycopg2.connect(os.environ['postgresql://taxi_simulacoes_db_user:n13itHNrUkSChN4uNKdgpPeYntUUfWZ2@dpg-d3gl1k63jp1c73esbuo0-a/taxi_simulacoes_db'])
-        return conn
-    except psycopg2.OperationalError as e:
-        print(f"Erro de conexão com o banco de dados: {e}")
-        return None
+    """Cria e retorna uma conexão com o banco de dados."""
+    # --- A ÚNICA LINHA ALTERADA ESTÁ AQUI ---
+    conn = psycopg2.connect(os.environ['postgresql://taxi_simulacoes_db_user:n13itHNrUkSChN4uNKdgpPeYntUUfWZ2@dpg-d3gl1k63jp1c73esbuo0-a/taxi_simulacoes_db'])
+    return conn
 
 def criar_tabela_se_nao_existir():
     """Executa o comando SQL para criar nossa tabela de simulações se ela ainda não existir."""
@@ -60,8 +57,6 @@ def predict():
 
     data = request.json
 
-    # --- CORREÇÃO PRINCIPAL AQUI ---
-    # As chaves (keys) aqui agora são IGUAIS às que o seu JavaScript envia no "payload"
     try:
         distancia = data['trip_distance']
         hora = data['pickup_hour']
@@ -69,9 +64,7 @@ def predict():
         nome = data.get('nome')
         fonte = data['fonte']
     except KeyError as e:
-        # Se algum campo esperado não vier do front-end, retorna um erro claro.
         return jsonify({'error': f'Campo obrigatório ausente no envio: {e}'}), 400
-    # --- FIM DA CORREÇÃO ---
     
     # A busca no DataFrame usa os nomes das colunas do arquivo Parquet, o que já estava correto.
     resultado = df[

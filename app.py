@@ -3,10 +3,13 @@ import pandas as pd
 import os
 import psycopg2
 from dotenv import load_dotenv
+from flask_cors import CORS, cross_origin  # <-- IMPORTANTE
 
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app, resources={r"/predict": {"origins": "*"}})  
+# se quiser restringir só para seu site, troque "*" por ["https://leanttro.github.io"]
 
 try:
     df = pd.read_parquet('dados.parquet')
@@ -50,7 +53,8 @@ def criar_tabela_se_nao_existir():
 def home():
     return render_template('index.html')
 
-@app.route('/predict', methods=['POST'])
+@app.route('/predict', methods=['POST', 'OPTIONS'])
+@cross_origin(origins=["https://leanttro.github.io"])  # <-- libera seu frontend
 def predict():
     if df.empty:
         return jsonify({'error': 'Servidor não conseguiu carregar os dados de previsão.'}), 500
@@ -68,10 +72,8 @@ def predict():
     except KeyError as e:
         return jsonify({'error': f'Campo obrigatório ausente: {e}'}), 400
 
-    # A busca no DataFrame usa os nomes das colunas do arquivo Parquet
     resultado = df[
         (df['distancia_km'] == distancia) &
-        # --- CORREÇÃO APLICADA AQUI ---
         (df['pickup_hour'] == hora) & 
         (df['dia_semana'] == dia_semana)
     ]
@@ -111,4 +113,4 @@ except Exception as e:
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=True)
